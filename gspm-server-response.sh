@@ -14,13 +14,17 @@ while read -r key value; do
     key=${key%:}
     headers[$key]=$value
 done
-read -rN "${headers["Content-length"]}" body
+if [[ "$method" == "POST" ]]; then
+    read -rN "${headers["Content-length"]}" body
+fi
 
-content=$(echo -e "$body")
+# content=$(echo -e "$body")
+content="Hello!"
 
 echo "HTTP/1.1 200 OK"
 echo "Date: $(date -R)"
+echo "Server: GSPM Server v0.0.1 ($(head -c8 .git/refs/heads/master))"
 echo "Connection: close"
-echo "Content-Length: $((${#content} + 1))"
+echo "Content-Length: $((${#content}))"
 echo ""
 echo "$content"
