@@ -97,24 +97,75 @@ geno::structure::bmp::handleargument() {
     done
 }
 
-geno::structure::bmp::convertplane() {
-    geno::base::log::debug "$TAG" "ConvertPlane Begin"
-    __GSPM_BMP_RAWPLANE="$(mktemp)"
-    geno::base::log::debug "$TAG" "ConvertPlane rawplane temp at $__GSPM_BMP_RAWPLANE"
-    tac "$1" | xxd -r -p > "$__GSPM_BMP_RAWPLANE"
-    geno::base::log::debug "$TAG" "ConvertPlane End"
+geno::structure::bmp::parseplane() {
+    geno::base::log::debug "$TAG" "ParsePlane Begin"
+    if [[ x"$width" == "xauto" ]] || [[ x"$width" == "x" ]]; then
+        width=$(head -n1 "$1" | awk '{ print NF }')
+        geno::base::log::debug "$TAG" "ParsePlane redefine width as $width"
+    fi
+    if [[ x"$height" == "xauto" ]] || [[ x"$height" == "x" ]]; then
+        height=$(wc -l "$1" | awk '{ print $1 }')
+        geno::base::log::debug "$TAG" "ParsePlane redefine height as $height"
+    fi
+    geno::base::log::debug "$TAG" "ParsePlane writing rawplane temp at $2"
+    # shellcheck disable=SC2016
+    awk '{ for (i = 1; i <= NF; i++) { printf("%s%s%s ", substr($i, 5, 2), substr($i, 3, 2), substr($i, 0, 2)) }; print "" }' "$1" | awk '{ print $0, "0000" }' | tac | xxd -r -p > "$2"
+    geno::base::log::debug "$TAG" "ParsePlane End"
 }
 
 geno::structure::bmp::outputheader() {
     geno::base::log::debug "$TAG" "OutputHeader Begin"
-    geno::base::binmanip::print::hex2toint16be "424d" > "$output"
+    {
+        # File header: BM
+        geno::base::binmanip::print::hex2toint16be "424d"
+        # File size
+        geno::base::binmanip::print::dectoint32le "$(($(geno::base::io::read::filesize "$1") + 54))"
+        # Reserved
+        geno::base::binmanip::print::hex2toint16le "0000"
+        # Reserved
+        geno::base::binmanip::print::hex2toint16le "0000"
+        # Offset to raw data, currently hardcoded
+        geno::base::binmanip::print::dectoint32le "54"
+        # DIB header size, currently hardcoded
+        geno::base::binmanip::print::dectoint32le "40"
+        # Width
+        geno::base::binmanip::print::dectoint32le "$width"
+        # Height
+        geno::base::binmanip::print::dectoint32le "$height"
+        # Number of planes
+        geno::base::binmanip::print::dectoint16le "1"
+        # Color depth
+        geno::base::binmanip::print::dectoint16le "24"
+        # Compression
+        geno::base::binmanip::print::dectoint32le "0"
+        # Data size
+        geno::base::binmanip::print::dectoint32le "$(geno::base::io::read::filesize "$1")"
+        # X resolution
+        geno::base::binmanip::print::dectoint32le "0"
+        # Y resolution
+        geno::base::binmanip::print::dectoint32le "0"
+        # Number of color palettes
+        geno::base::binmanip::print::dectoint32le "0"
+        # Number of important colors
+        geno::base::binmanip::print::dectoint32le "0"
+
+    } > "$output"
     geno::base::log::debug "$TAG" "OutputHeader End"
+}
+
+geno::structure::bmp::outputbody() {
+    geno::base::log::debug "$TAG" "OutputBody Begin"
+    cat "$1" >> "$output"
+    geno::base::log::debug "$TAG" "OutputBody End"
 }
 
 geno::structure::bmp::main() {
     geno::base::log::debug "$TAG" "Main Begin"
     geno::structure::bmp::handleargument $@
-    geno::structure::bmp::convertplane "$plane"
-    geno::structure::bmp::outputheader
+    __GSPM_BMP_RAWPLANE="$(mktemp)"
+    geno::structure::bmp::parseplane "$plane" "$__GSPM_BMP_RAWPLANE"
+    geno::structure::bmp::outputheader "$__GSPM_BMP_RAWPLANE"
+    geno::structure::bmp::outputbody "$__GSPM_BMP_RAWPLANE"
+    rm "$__GSPM_BMP_RAWPLANE"
     geno::base::log::debug "$TAG" "Main End"
 }
