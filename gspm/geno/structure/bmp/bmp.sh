@@ -4,6 +4,10 @@
 
 # shellcheck source=geno/base/log/__package.sh
 include geno/base/log
+
+# shellcheck source=geno/base/binmanip/__package.sh
+include geno/base/binmanip
+
 TAG="BMP     "
 
 verboseLevel=0
@@ -21,6 +25,7 @@ Options:
                         possible value: "auto", uint32
 -p, --plane             path to file containing color pixels
                         color pixel format: RRGGBB
+-o, --output            path to output file
 EOF
 }
 
@@ -35,7 +40,7 @@ geno::structure::bmp::verbose() {
 }
 
 geno::structure::bmp::handleargument() {
-    while getopts hVvW:H:p:-: opts; do
+    while getopts hVvW:H:p:o:-: opts; do
         case $opts in
             h)
                 geno::structure::bmp::help
@@ -54,6 +59,9 @@ geno::structure::bmp::handleargument() {
                 ;;
             p)
                 plane=$OPTARG
+                ;;
+            o)
+                output=$OPTARG
                 ;;
             -)
                 OPTARG=${OPTARG#-*}
@@ -76,18 +84,37 @@ geno::structure::bmp::handleargument() {
                     plane)
                         plane=${OPTARG#*=}
                         ;;
+                    output)
+                        output=${OPTARG#*=}
+                        ;;
                     *)
-
+                        geno::base::log::error "Unrecognized option: --${OPTARG%=*}"
                 esac
                 ;;
             *)
+                geno::base::log::error "Unrecognized option: -$opts"
         esac
     done
 }
 
-geno::structure::bmp::main() {
-    geno::base::log::debug "$TAG" "Main"
-    geno::structure::bmp::handleargument $@
+geno::structure::bmp::convertplane() {
+    geno::base::log::debug "$TAG" "ConvertPlane Begin"
+    __GSPM_BMP_RAWPLANE="$(mktemp)"
+    geno::base::log::debug "$TAG" "ConvertPlane rawplane temp at $__GSPM_BMP_RAWPLANE"
+    tac "$1" | xxd -r -p > "$__GSPM_BMP_RAWPLANE"
+    geno::base::log::debug "$TAG" "ConvertPlane End"
 }
 
-geno::structure::bmp::main $@
+geno::structure::bmp::outputheader() {
+    geno::base::log::debug "$TAG" "OutputHeader Begin"
+    geno::base::binmanip::print::hex2toint16be "424d" > "$output"
+    geno::base::log::debug "$TAG" "OutputHeader End"
+}
+
+geno::structure::bmp::main() {
+    geno::base::log::debug "$TAG" "Main Begin"
+    geno::structure::bmp::handleargument $@
+    geno::structure::bmp::convertplane "$plane"
+    geno::structure::bmp::outputheader
+    geno::base::log::debug "$TAG" "Main End"
+}
