@@ -20,16 +20,19 @@ create() {
     package() {
         packagename="$1"
         mkdir -p "$GSPM_ROOT/$packagename"
-        create manifest "$packagename"
         cat << EOF > "$GSPM_ROOT/$packagename/${packagename##*/}.sh"
 #!/bin/bash
-
 EOF
         update manifest
     }
 
     tool() {
-        :
+        toolname="$1"
+        mkdir -p "$(realpath -m "$GSPM_ROOT/$toolname/..")"
+        cat << EOF > "$GSPM_ROOT/$toolname.sh"
+#!/bin/bash
+EOF
+        update manifest
     }
     $@
 }

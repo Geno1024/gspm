@@ -8,8 +8,6 @@ include geno/base/log
 # shellcheck source=geno/base/binmanip/__package.sh
 include geno/base/binmanip
 
-TAG="BMP     "
-
 verboseLevel=0
 
 geno::structure::bmp::help() {
@@ -40,6 +38,7 @@ geno::structure::bmp::verbose() {
 }
 
 geno::structure::bmp::handleargument() {
+    OPTIND=1
     while getopts hVvW:H:p:o:-: opts; do
         case $opts in
             h)
@@ -98,23 +97,23 @@ geno::structure::bmp::handleargument() {
 }
 
 geno::structure::bmp::parseplane() {
-    geno::base::log::debug "$TAG" "ParsePlane Begin"
+    geno::base::log::debug "BMP     " "ParsePlane Begin"
     if [[ x"$width" == "xauto" ]] || [[ x"$width" == "x" ]]; then
         width=$(head -n1 "$1" | awk '{ print NF }')
-        geno::base::log::debug "$TAG" "ParsePlane redefine width as $width"
+        geno::base::log::debug "BMP     " "ParsePlane redefine width as $width"
     fi
     if [[ x"$height" == "xauto" ]] || [[ x"$height" == "x" ]]; then
         height=$(wc -l "$1" | awk '{ print $1 }')
-        geno::base::log::debug "$TAG" "ParsePlane redefine height as $height"
+        geno::base::log::debug "BMP     " "ParsePlane redefine height as $height"
     fi
-    geno::base::log::debug "$TAG" "ParsePlane writing rawplane temp at $2"
+    geno::base::log::debug "BMP     " "ParsePlane writing rawplane temp at $2"
     # shellcheck disable=SC2016
-    awk '{ for (i = 1; i <= NF; i++) { printf("%s%s%s ", substr($i, 5, 2), substr($i, 3, 2), substr($i, 0, 2)) }; print "" }' "$1" | awk '{ print $0, "0000" }' | tac | xxd -r -p > "$2"
-    geno::base::log::debug "$TAG" "ParsePlane End"
+    awk '{ for (i = 1; i <= NF; i++) { printf("%s%s%s ", substr($i, 5, 2), substr($i, 3, 2), substr($i, 0, 2)) }; print "" }' "$1" | tac | xxd -r -p > "$2"
+    geno::base::log::debug "BMP     " "ParsePlane End"
 }
 
 geno::structure::bmp::outputheader() {
-    geno::base::log::debug "$TAG" "OutputHeader Begin"
+    geno::base::log::debug "BMP     " "OutputHeader Begin"
     {
         # File header: BM
         geno::base::binmanip::print::hex2toint16be "424d"
@@ -150,22 +149,22 @@ geno::structure::bmp::outputheader() {
         geno::base::binmanip::print::dectoint32le "0"
 
     } > "$output"
-    geno::base::log::debug "$TAG" "OutputHeader End"
+    geno::base::log::debug "BMP     " "OutputHeader End"
 }
 
 geno::structure::bmp::outputbody() {
-    geno::base::log::debug "$TAG" "OutputBody Begin"
+    geno::base::log::debug "BMP     " "OutputBody Begin"
     cat "$1" >> "$output"
-    geno::base::log::debug "$TAG" "OutputBody End"
+    geno::base::log::debug "BMP     " "OutputBody End"
 }
 
 geno::structure::bmp::main() {
-    geno::base::log::debug "$TAG" "Main Begin"
-    geno::structure::bmp::handleargument $@
+    geno::base::log::debug "BMP     " "Main Begin"
+    geno::structure::bmp::handleargument "$@"
     __GSPM_BMP_RAWPLANE="$(mktemp)"
     geno::structure::bmp::parseplane "$plane" "$__GSPM_BMP_RAWPLANE"
     geno::structure::bmp::outputheader "$__GSPM_BMP_RAWPLANE"
     geno::structure::bmp::outputbody "$__GSPM_BMP_RAWPLANE"
     rm "$__GSPM_BMP_RAWPLANE"
-    geno::base::log::debug "$TAG" "Main End"
+    geno::base::log::debug "BMP     " "Main End"
 }
