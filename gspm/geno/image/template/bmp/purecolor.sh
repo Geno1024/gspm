@@ -8,8 +8,6 @@ include geno/base/log
 # shellcheck source=geno/structure/bmp/__package.sh
 include geno/structure/bmp
 
-TAG="PURECOLO"
-
 geno::image::template::bmp::purecolor::help() {
     cat << EOF
 Usage: $0 [-hVv] [options]
