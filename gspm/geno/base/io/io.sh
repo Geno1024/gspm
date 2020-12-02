@@ -11,3 +11,7 @@ geno::base::io::write::stdout() {
 geno::base::io::write::stdout() {
     echo >&2 "$1"
 }
+
+geno::base::io::read::key() {
+    read -rn1
+}
